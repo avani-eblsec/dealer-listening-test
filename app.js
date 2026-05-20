@@ -5,7 +5,7 @@ let questions = [];
 let selectedQuestions = [];
 
 let currentQuestion = 0;
-let audioCache = {};
+
 let answers = [];
 
 let playCount = 0;
@@ -17,6 +17,12 @@ let timerInterval = null;
 let candidateName = '';
 
 let currentAudio = null;
+
+// PRELOAD VOICES
+window.onload = ()=>{
+
+    speechSynthesis.getVoices();
+};
 
 const loginScreen =
 document.getElementById(
@@ -238,7 +244,7 @@ function showQuestion(){
 
     playCount = 0;
 
-    // STOP OLD AUDIO
+    // STOP AUDIO
     if(currentAudio){
 
         currentAudio.pause();
@@ -246,12 +252,13 @@ function showQuestion(){
         currentAudio.currentTime = 0;
     }
 
+    speechSynthesis.cancel();
+
     updateSidebar();
 
     const q =
     selectedQuestions[currentQuestion];
-preloadAudio(currentQuestion);
-preloadAudio(currentQuestion + 1);
+
     if(!q){
 
         alert(
@@ -367,7 +374,7 @@ async function toggleSpeech(){
         '.play-btn'
     );
 
-    // PAUSE
+    // PAUSE AUDIO
     if(
         currentAudio &&
         !currentAudio.paused
@@ -381,7 +388,7 @@ async function toggleSpeech(){
         return;
     }
 
-    // RESUME
+    // RESUME AUDIO
     if(
         currentAudio &&
         currentAudio.paused
@@ -408,6 +415,7 @@ async function toggleSpeech(){
     const q =
     selectedQuestions[currentQuestion];
 
+    // HUMANIZE TEXT
     let humanText =
     q.audioText
 
@@ -420,50 +428,82 @@ async function toggleSpeech(){
     .replace(/,/g,' , ')
     .replace(/\./g,' ... ');
 
+    playBtn.innerText =
+    'Loading Audio...';
+
     try{
 
-        playBtn.innerText =
-        'Loading Audio...';
+        // GET VOICES
+        const voices =
+        speechSynthesis.getVoices();
 
-        let audioUrl;
+        // BEST INDIAN VOICE
+        const indianVoice =
 
-        // USE CACHE
-        if(
-            audioCache[currentQuestion]
-        ){
+            voices.find(v =>
+                v.name.includes('Neerja')
+            )
 
-            audioUrl =
-            audioCache[currentQuestion];
-        }
-        else{
+            ||
 
-            const ttsUrl =
+            voices.find(v =>
+                v.name.includes('Prabhat')
+            )
 
-`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
+            ||
 
-            const response =
-            await fetch(ttsUrl);
+            voices.find(v =>
+                v.lang === 'en-IN'
+            )
 
-            const blob =
-            await response.blob();
+            ||
 
-            audioUrl =
-            URL.createObjectURL(blob);
+            voices.find(v =>
+                v.lang.startsWith('en')
+            )
 
-            // SAVE CACHE
-            audioCache[currentQuestion] =
-            audioUrl;
-        }
+            ||
 
-        currentAudio =
-        new Audio(audioUrl);
+            voices[0];
 
-        await currentAudio.play();
+        console.log(
+            'VOICE:',
+            indianVoice
+        );
 
-        playBtn.innerText =
-        '⏸ Pause Audio';
+        // CREATE SPEECH
+        const utterance =
+        new SpeechSynthesisUtterance(
+            humanText
+        );
 
-        currentAudio.onended = ()=>{
+        utterance.voice =
+        indianVoice;
+
+        utterance.lang =
+        'en-IN';
+
+        utterance.rate =
+        0.95;
+
+        utterance.pitch =
+        1;
+
+        utterance.volume =
+        1;
+
+        let fallbackTriggered =
+        false;
+
+        // START
+        utterance.onstart = ()=>{
+
+            playBtn.innerText =
+            '⏸ Pause Audio';
+        };
+
+        // END
+        utterance.onend = ()=>{
 
             playBtn.innerText =
             '▶ Play Audio';
@@ -471,15 +511,51 @@ async function toggleSpeech(){
             startTimer();
         };
 
-        currentAudio.onerror = ()=>{
+        // FALLBACK
+        utterance.onerror =
+        async ()=>{
+
+            if(fallbackTriggered)
+            return;
+
+            fallbackTriggered =
+            true;
+
+            console.log(
+                'Browser TTS Failed'
+            );
+
+            // FALLBACK API
+            const ttsUrl =
+
+`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
+
+            currentAudio =
+            new Audio(ttsUrl);
+
+            currentAudio.play();
 
             playBtn.innerText =
-            '▶ Play Audio';
+            '⏸ Pause Audio';
 
-            alert(
-                'Audio failed to load'
-            );
+            currentAudio.onended = ()=>{
+
+                playBtn.innerText =
+                '▶ Play Audio';
+
+                startTimer();
+            };
         };
+
+        speechSynthesis.cancel();
+
+        setTimeout(()=>{
+
+            speechSynthesis.speak(
+                utterance
+            );
+
+        },100);
 
         playCount++;
 
@@ -493,37 +569,7 @@ async function toggleSpeech(){
         '▶ Play Audio';
     }
 }
-async function preloadAudio(index){
 
-    if(
-        audioCache[index]
-    ) return;
-
-    const q =
-    selectedQuestions[index];
-
-    if(!q) return;
-
-    let humanText =
-    q.audioText
-
-    .replace(/CE/g,' C E ')
-    .replace(/PE/g,' P E ')
-    .replace(/SL/g,' stop loss ');
-
-    const ttsUrl =
-
-`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
-
-    const response =
-    await fetch(ttsUrl);
-
-    const blob =
-    await response.blob();
-
-    audioCache[index] =
-    URL.createObjectURL(blob);
-}
 // SELECT OPTION
 function selectOption(
     element,
@@ -560,6 +606,8 @@ function nextQuestion(){
         currentAudio.currentTime = 0;
     }
 
+    speechSynthesis.cancel();
+
     if(
         currentQuestion ===
         selectedQuestions.length - 1
@@ -583,7 +631,6 @@ nextBtn.addEventListener(
 // SHOW RESULTS
 async function showResults(){
 
-    // PREVENT MULTIPLE SUBMISSIONS
     if(submitted){
 
         return;
@@ -660,6 +707,8 @@ async function showResults(){
 
         currentAudio.currentTime = 0;
     }
+
+    speechSynthesis.cancel();
 
     clearInterval(timerInterval);
 
