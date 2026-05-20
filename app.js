@@ -48,7 +48,7 @@ document.getElementById(
     'result'
 );
 
-// START TEST
+// START
 startBtn.addEventListener(
 'click',
 async ()=>{
@@ -81,18 +81,20 @@ async ()=>{
     await loadQuestions();
 });
 
-// LOAD QUESTIONS
+// LOAD QUESTIONS.TXT
 async function loadQuestions(){
 
     try{
 
         const res =
         await fetch(
-            'questions.json'
+            './questions.txt'
         );
 
-        questions =
-        await res.json();
+        const rawText =
+        await res.text();
+
+        parseQuestions(rawText);
 
         selectedQuestions =
         shuffleArray(questions)
@@ -105,9 +107,98 @@ async function loadQuestions(){
         console.log(err);
 
         alert(
-            'Failed to load questions.json'
+            'Failed to load questions.txt'
         );
     }
+}
+
+// PARSE QUESTIONS
+function parseQuestions(rawText){
+
+    const rounds =
+    rawText.match(
+        /Round\\s+\\d+[\\s\\S]*?(?=Round\\s+\\d+|$)/g
+    ) || [];
+
+    questions =
+    rounds.map((round,index)=>{
+
+        const audioMatch =
+        round.match(
+            /Audio Script\\s*[\\r\\n\\s]*[“\"]([\\s\\S]*?)[”\"]/
+        );
+
+        const questionMatch =
+        round.match(
+            /Question\\s*([\\s\\S]*?)\\s*Answer/
+        );
+
+        const answerMatch =
+        round.match(
+            /Answer\\s*([\\s\\S]*)/
+        );
+
+        const audioText =
+        audioMatch
+        ? audioMatch[1].trim()
+        : '';
+
+        const question =
+        questionMatch
+        ? questionMatch[1].trim()
+        : '';
+
+        const answer =
+        answerMatch
+        ? answerMatch[1].trim()
+        : '';
+
+        return {
+
+            id:index + 1,
+
+            audioText,
+
+            question,
+
+            answer,
+
+            options:
+            generateOptions(answer)
+        };
+    });
+}
+
+// OPTIONS
+function generateOptions(correct){
+
+    if(!isNaN(correct)){
+
+        const num =
+        parseInt(correct);
+
+        return shuffleArray([
+
+            String(num),
+
+            String(num - 2),
+
+            String(num + 2),
+
+            String(num + 4)
+        ]);
+    }
+
+    return shuffleArray([
+
+        correct,
+
+        'Nifty 24800 CE',
+
+        'Bank Nifty 55200 PE',
+
+        'Sensex 81200 PE'
+    ]);
 }
 
 // SHUFFLE
@@ -190,7 +281,7 @@ function showQuestion(){
     }
 }
 
-// UPDATE SIDEBAR
+// SIDEBAR
 function updateSidebar(){
 
     document.getElementById(
@@ -233,7 +324,7 @@ function startTimer(){
     },1000);
 }
 
-// PLAY AUDIO
+// AUDIO
 function toggleSpeech(){
 
     const playBtn =
@@ -241,7 +332,6 @@ function toggleSpeech(){
         '.play-btn'
     );
 
-    // PAUSE
     if(
         speechSynthesis.speaking &&
         !speechSynthesis.paused
@@ -255,7 +345,6 @@ function toggleSpeech(){
         return;
     }
 
-    // RESUME
     if(
         speechSynthesis.paused &&
         currentSpeech
@@ -269,7 +358,6 @@ function toggleSpeech(){
         return;
     }
 
-    // MAX 2 TIMES
     if(playCount >= 2){
 
         alert(
@@ -287,7 +375,6 @@ function toggleSpeech(){
 
     .replace(/CE/g,' C E ')
     .replace(/PE/g,' P E ')
-    .replace(/SL/g,' stop loss ')
     .replace(/\./g,' ... ')
     .replace(/,/g,' , ');
 
@@ -305,28 +392,21 @@ function toggleSpeech(){
     currentSpeech.pitch =
     0.82;
 
-    currentSpeech.volume =
-    1;
-
     const voices =
     speechSynthesis.getVoices();
 
-    const indianVoice =
+    const voice =
 
         voices.find(v =>
             v.lang === 'en-IN'
         ) ||
 
-        voices.find(v =>
-            v.name.includes('Google')
-        ) ||
-
         voices[0];
 
-    if(indianVoice){
+    if(voice){
 
         currentSpeech.voice =
-        indianVoice;
+        voice;
     }
 
     playBtn.innerText =
@@ -349,7 +429,7 @@ function toggleSpeech(){
     );
 }
 
-// SELECT OPTION
+// SELECT
 function selectOption(
     element,
     option
@@ -372,7 +452,7 @@ function selectOption(
     option;
 }
 
-// NEXT QUESTION
+// NEXT
 function nextQuestion(){
 
     clearInterval(timerInterval);
@@ -399,7 +479,7 @@ nextBtn.addEventListener(
     nextQuestion
 );
 
-// SHOW RESULTS
+// RESULTS
 function showResults(){
 
     let score = 0;
@@ -415,7 +495,6 @@ function showResults(){
         }
     });
 
-    // SAVE LOCAL RESULT
     localStorage.setItem(
 
         'dealer_test_result',
