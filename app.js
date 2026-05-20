@@ -20,14 +20,16 @@ let timerInterval = null;
 
 let candidateName = '';
 
-// FORCE LOAD VOICES
-window.onload = () => {
+let isSpeaking = false;
 
-    speechSynthesis.getVoices();
+// PRELOAD VOICES
+window.onload = async ()=>{
+
+    await loadVoices();
 };
 
-// LOAD VOICES PROPERLY
-async function loadVoices() {
+// LOAD VOICES
+async function loadVoices(){
 
     return new Promise(resolve => {
 
@@ -41,7 +43,7 @@ async function loadVoices() {
             return;
         }
 
-        speechSynthesis.onvoiceschanged = () => {
+        speechSynthesis.onvoiceschanged = ()=>{
 
             voices =
             speechSynthesis.getVoices();
@@ -261,8 +263,6 @@ function shuffleArray(array){
 
 // SHOW QUESTION
 function showQuestion(){
-
-    speechSynthesis.cancel();
 
     clearInterval(timerInterval);
 
@@ -514,7 +514,7 @@ async function toggleSpeech(){
     'en-IN';
 
     currentSpeech.rate =
-    0.9;
+    0.95;
 
     currentSpeech.pitch =
     1;
@@ -525,7 +525,14 @@ async function toggleSpeech(){
     playBtn.innerText =
     '⏸ Pause Audio';
 
+    currentSpeech.onstart = ()=>{
+
+        isSpeaking = true;
+    };
+
     currentSpeech.onend = ()=>{
+
+        isSpeaking = false;
 
         playBtn.innerText =
         '▶ Play Audio';
@@ -533,30 +540,92 @@ async function toggleSpeech(){
         startTimer();
     };
 
-    currentSpeech.onerror = (e)=>{
+    currentSpeech.onerror = async (e)=>{
 
         console.log(
             'Speech Error:',
-            e
+            e.error
         );
 
-        playBtn.innerText =
-        '▶ Play Audio';
+        // FALLBACK
+        const fallback =
+        voices.find(v =>
+            v.lang.startsWith('en')
+        );
+
+        if(
+            fallback &&
+            fallback !== indianVoice
+        ){
+
+            const retrySpeech =
+            new SpeechSynthesisUtterance(
+                humanText
+            );
+
+            retrySpeech.voice =
+            fallback;
+
+            retrySpeech.lang =
+            'en-US';
+
+            retrySpeech.rate =
+            0.95;
+
+            retrySpeech.pitch =
+            1;
+
+            retrySpeech.volume =
+            1;
+
+            retrySpeech.onend = ()=>{
+
+                playBtn.innerText =
+                '▶ Play Audio';
+
+                startTimer();
+            };
+
+            await new Promise(resolve =>
+                setTimeout(resolve,300)
+            );
+
+            speechSynthesis.speak(
+                retrySpeech
+            );
+        }
+        else{
+
+            playBtn.innerText =
+            '▶ Play Audio';
+        }
     };
 
     playCount++;
 
     updateSidebar();
 
-    speechSynthesis.cancel();
+    try{
 
-    setTimeout(()=>{
+        if(
+            speechSynthesis.speaking
+        ){
+
+            speechSynthesis.cancel();
+
+            await new Promise(resolve =>
+                setTimeout(resolve,300)
+            );
+        }
 
         speechSynthesis.speak(
             currentSpeech
         );
+    }
+    catch(err){
 
-    },100);
+        console.log(err);
+    }
 }
 
 // SELECT OPTION
@@ -587,7 +656,12 @@ function nextQuestion(){
 
     clearInterval(timerInterval);
 
-    speechSynthesis.cancel();
+    if(
+        speechSynthesis.speaking
+    ){
+
+        speechSynthesis.cancel();
+    }
 
     if(
         currentQuestion ===
@@ -681,7 +755,12 @@ async function showResults(){
         console.log(err);
     }
 
-    speechSynthesis.cancel();
+    if(
+        speechSynthesis.speaking
+    ){
+
+        speechSynthesis.cancel();
+    }
 
     clearInterval(timerInterval);
 
