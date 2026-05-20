@@ -466,12 +466,14 @@ async function toggleSpeech(){
 
         // IF LOCAL VOICE EXISTS
         if(localVoice){
-
-            const utterance =
+            
+            window.currentUtterance =
             new SpeechSynthesisUtterance(
                 humanText
             );
-
+            
+            const utterance =
+            window.currentUtterance;
             utterance.voice =
             localVoice;
 
@@ -501,17 +503,27 @@ async function toggleSpeech(){
                 startTimer();
             };
 
-            utterance.onerror =
-            ()=>{
-
+            utterance.onerror = (e)=>{
+            
+                // IGNORE MANUAL CANCEL
+                if(
+                    e.error === 'interrupted'
+                    ||
+                    e.error === 'canceled'
+                ){
+            
+                    return;
+                }
+            
+                console.log(e);
+            
                 playBtn.innerText =
                 '▶ Play Audio';
-
+            
                 alert(
                     'Speech failed on this browser'
                 );
             };
-
             speechSynthesis.cancel();
 
             setTimeout(()=>{
@@ -575,15 +587,28 @@ function nextQuestion(){
 
     clearInterval(timerInterval);
 
-    // STOP AUDIO
+    // STOP API AUDIO
     if(currentAudio){
 
         currentAudio.pause();
 
         currentAudio.currentTime = 0;
+
+        currentAudio = null;
     }
 
-    speechSynthesis.cancel();
+    // STOP SPEECH CLEANLY
+    speechSynthesis.onvoiceschanged = null;
+
+    window.speechSynthesis.cancel();
+
+    // REMOVE OLD EVENTS
+    if(window.currentUtterance){
+
+        currentUtterance.onend = null;
+
+        currentUtterance.onerror = null;
+    }
 
     if(
         currentQuestion ===
@@ -599,11 +624,6 @@ function nextQuestion(){
 
     showQuestion();
 }
-
-nextBtn.addEventListener(
-    'click',
-    nextQuestion
-);
 
 // SHOW RESULTS
 async function showResults(){
