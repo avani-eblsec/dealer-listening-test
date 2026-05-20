@@ -1,452 +1,209 @@
-window.speechSynthesis.cancel();
+const fs = require('fs');
+const path = require('path');
+const express = require('express');
 
-let availableVoices = [];
+const app = express();
 
-speechSynthesis.onvoiceschanged = () => {
+// PORT
+const PORT = 5000;
 
-    availableVoices =
-    speechSynthesis.getVoices();
-};
+// JSON SUPPORT
+app.use(express.json());
 
-let questions = [];
+// STATIC FRONTEND
+app.use(express.static('public'));
 
-let selectedQuestions = [];
-
-let currentQuestion = 0;
-
-let answers = [];
-
-let playCount = 0;
-
-let currentSpeech = null;
-
-let timer = 15;
-
-let timerInterval = null;
-
-let candidateName = '';
-
-const loginScreen =
-document.getElementById(
-    'loginScreen'
+// LOAD QUESTIONS FILE
+const rawText = fs.readFileSync(
+    path.join(__dirname, 'questions.txt'),
+    'utf8'
 );
 
-const dashboard =
-document.getElementById(
-    'dashboard'
-);
+// PARSE ROUNDS
+const rounds =
+rawText.match(
+    /Round\s+\d+[\s\S]*?(?=Round\s+\d+|$)/g
+) || [];
 
-const startBtn =
-document.getElementById(
-    'startBtn'
-);
+// GENERATE QUESTIONS
+const questions = rounds.map((round,index)=>{
 
-const container =
-document.getElementById(
-    'test-container'
-);
+    const audioMatch =
+    round.match(
+        /Audio Script\s*[\r\n\s]*[“"]([\s\S]*?)[”"]/
+    );
 
-const nextBtn =
-document.getElementById(
-    'nextBtn'
-);
+    const questionMatch =
+    round.match(
+        /Question\s*([\s\S]*?)\s*Answer/
+    );
 
-const resultDiv =
-document.getElementById(
-    'result'
-);
+    const answerMatch =
+    round.match(
+        /Answer\s*([\s\S]*)/
+    );
 
-// START TEST
-startBtn.addEventListener(
-'click',
-async ()=>{
+    const audioText =
+    audioMatch
+    ? audioMatch[1].trim()
+    : '';
 
-    candidateName =
-    document.getElementById(
-        'candidateName'
-    ).value.trim();
+    const question =
+    questionMatch
+    ? questionMatch[1].trim()
+    : '';
 
-    if(!candidateName){
+    const answer =
+    answerMatch
+    ? answerMatch[1].trim()
+    : '';
 
-        alert(
-            'Enter your name'
-        );
+    return {
 
-        return;
-    }
+        id : index + 1,
 
-    loginScreen.style.display =
-    'none';
+        audioText,
 
-    dashboard.style.display =
-    'flex';
+        question,
 
-    document.getElementById(
-        'candidateDisplay'
-    ).innerText =
-    candidateName;
+        answer,
 
-    await loadQuestions();
+        options : generateOptions(answer)
+    };
 });
 
-// LOAD QUESTIONS
-async function loadQuestions(){
+// GENERATE OPTIONS
+function generateOptions(correct){
 
-    const res =
-    await fetch(
-        '/api/questions'
-    );
+    // NUMBER TYPE ANSWERS
+    if(!isNaN(correct)){
 
-    questions =
-    await res.json();
+        const num = parseInt(correct);
 
-    selectedQuestions =
-    shuffleArray(questions)
-    .slice(0,10);
+        return shuffle([
 
-    showQuestion();
+            String(num),
+            String(num - 2),
+            String(num + 2),
+            String(num + 4)
+        ]);
+    }
+
+    // TEXT TYPE ANSWERS
+    return shuffle([
+
+        correct,
+
+        'Nifty 24800 CE',
+        'Bank Nifty 55200 PE',
+        'Sensex 81200 PE'
+    ]);
 }
 
-// SHUFFLE
-function shuffleArray(array){
-
-    return [...array]
-    .sort(
-        ()=>Math.random()-0.5
-    );
-}
-
-// SHOW QUESTION
-function showQuestion(){
-
-    speechSynthesis.cancel();
-
-    clearInterval(timerInterval);
-
-    timer = 30;
-
-    playCount = 0;
-
-    updateSidebar();
-
-    const q =
-    selectedQuestions[currentQuestion];
-
-    container.innerHTML = `
-
-        <div class="audio-controls">
-
-            <button
-                class="play-btn"
-                onclick="toggleSpeech()"
-            >
-
-                ▶ Play Audio
-
-            </button>
-
-        </div>
-
-        <div class="question">
-
-            ${q.question}
-
-        </div>
-
-        <div class="options">
-
-            ${q.options.map(option => `
-
-                <div
-                    class="option"
-                    onclick="
-                        selectOption(
-                            this,
-                            '${option}'
-                        )
-                    "
-                >
-
-                    ${option}
-
-                </div>
-
-            `).join('')}
-
-        </div>
-    `;
-
-    if(
-        currentQuestion ===
-        selectedQuestions.length - 1
-    ){
-
-        nextBtn.innerText =
-        'Submit Test';
-    }
-    else{
-
-        nextBtn.innerText =
-        'Next Question';
-    }
-}
-
-// SIDEBAR
-function updateSidebar(){
-
-    document.getElementById(
-        'progressText'
-    ).innerText =
-    `${currentQuestion + 1} / 10`;
-
-    document.getElementById(
-        'playsLeft'
-    ).innerText =
-    2 - playCount;
-
-    document.getElementById(
-        'timer'
-    ).innerText =
-    `${timer}s`;
-}
-
-// TIMER
-function startTimer(){
-
-    clearInterval(timerInterval);
-
-    timerInterval =
-    setInterval(()=>{
-
-        timer--;
-
-        updateSidebar();
-
-        if(timer <= 0){
-
-            clearInterval(
-                timerInterval
-            );
-
-            nextQuestion();
-        }
-
-    },1000);
-}
-
-// AUDIO
-function toggleSpeech(){
-
-    const playBtn =
-    document.querySelector(
-        '.play-btn'
-    );
-
-    if(
-        speechSynthesis.speaking &&
-        !speechSynthesis.paused
-    ){
-
-        speechSynthesis.pause();
-
-        playBtn.innerText =
-        '▶ Resume Audio';
-
-        return;
-    }
-
-    if(
-        speechSynthesis.paused &&
-        currentSpeech
-    ){
-
-        speechSynthesis.resume();
-
-        playBtn.innerText =
-        '⏸ Pause Audio';
-
-        return;
-    }
-
-    if(playCount >= 2){
-
-        alert(
-            'Audio can only be played twice.'
-        );
-
-        return;
-    }
-
-    const q =
-    selectedQuestions[currentQuestion];
-
-    let humanText =
-    q.audioText
-
-    .replace(/CE/g,' C E ')
-    .replace(/PE/g,' P E ')
-    .replace(/\./g,' ... ')
-    .replace(/,/g,' , ');
-
-    currentSpeech =
-    new SpeechSynthesisUtterance(
-        humanText
-    );
-
-    currentSpeech.lang =
-    'en-IN';
-
-    currentSpeech.rate =
-    0.78;
-
-    currentSpeech.pitch =
-    0.82;
-
-    let voice =
-    availableVoices.find(v =>
-        v.lang === 'en-IN'
-    ) || availableVoices[0];
-
-    if(voice){
-
-        currentSpeech.voice =
-        voice;
-    }
-
-    playBtn.innerText =
-    '⏸ Pause Audio';
-
-    currentSpeech.onend = ()=>{
-
-        playBtn.innerText =
-        '▶ Play Audio';
-
-        startTimer();
-    };
-
-    playCount++;
-
-    updateSidebar();
-
-    speechSynthesis.speak(
-        currentSpeech
+// SHUFFLE ARRAY
+function shuffle(arr){
+
+    return [...arr].sort(
+        ()=>Math.random() - 0.5
     );
 }
 
-// SELECT
-function selectOption(
-    element,
-    option
-){
+// QUESTIONS API
+app.get('/api/questions',(req,res)=>{
 
-    document
-    .querySelectorAll('.option')
-    .forEach(el=>{
+    res.json(questions);
+});
 
-        el.classList.remove(
-            'selected'
-        );
-    });
+// SUBMIT SCORE
+app.post('/submit-score',(req,res)=>{
 
-    element.classList.add(
-        'selected'
-    );
+    try{
 
-    answers[currentQuestion] =
-    option;
-}
+        const {
+            name,
+            score
+        } = req.body;
 
-// NEXT
-function nextQuestion(){
-
-    clearInterval(timerInterval);
-
-    speechSynthesis.cancel();
-
-    if(
-        currentQuestion ===
-        selectedQuestions.length - 1
-    ){
-
-        submitTest();
-
-        return;
-    }
-
-    currentQuestion++;
-
-    showQuestion();
-}
-
-nextBtn.addEventListener(
-    'click',
-    nextQuestion
-);
-
-// SUBMIT
-async function submitTest(){
-
-    let score = 0;
-
-    selectedQuestions.forEach(
-    (q,index)=>{
-
+        // VALIDATION
         if(
-            answers[index] === q.answer
+            !name ||
+            score === undefined
         ){
 
-            score++;
+            return res.status(400).json({
+
+                success:false,
+                message:'Missing data'
+            });
         }
-    });
 
-    // SEND TO BACKEND
-    await fetch('/submit-score',{
+        // DATE & TIME
+        const now = new Date();
 
-        method:'POST',
+        const date =
+        now.toLocaleDateString();
 
-        headers:{
-            'Content-Type':
-            'application/json'
-        },
+        const time =
+        now.toLocaleTimeString();
 
-        body:JSON.stringify({
+        // FORMAT ENTRY
+        const entry = `
+========================================
+Date  : ${date}
+Time  : ${time}
+Name  : ${name}
+Score : ${score}/10
+========================================
+\n`;
 
-            name:candidateName,
+        // SAVE SCORE
+        fs.appendFileSync(
+            path.join(__dirname,'scores.txt'),
+            entry
+        );
 
-            score:score
-        })
-    });
+        console.log(
+            `Saved -> ${name} : ${score}/10`
+        );
 
-    showResults(score);
-}
+        res.json({
 
-// RESULTS
-function showResults(score){
+            success:true,
+            message:'Score saved successfully'
+        });
+    }
+    catch(err){
 
-    let html = `
+        console.log(err);
 
-        <div class="final-score">
+        res.status(500).json({
 
-            <h1>
+            success:false,
+            message:'Server error'
+        });
+    }
+});
 
-                ${score}/10
+// ROOT ROUTE
+app.get('/',(req,res)=>{
 
-            </h1>
+    res.sendFile(
+        path.join(
+            __dirname,
+            'public',
+            'index.html'
+        )
+    );
+});
 
-            <h2>
+// START SERVER
+app.listen(
+    PORT,
+    '0.0.0.0',
+    ()=>{
 
-                Test Completed
-
-            </h2>
-
-        </div>
-    `;
-
-    resultDiv.innerHTML =
-    html;
-
-    container.innerHTML = '';
-
-    nextBtn.style.display =
-    'none';
-}
+        console.log(
+            `Server Running On Port ${PORT}`
+        );
+    }
+);
