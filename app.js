@@ -1,5 +1,3 @@
-window.speechSynthesis.cancel();
-
 let submitted = false;
 
 let questions = [];
@@ -12,46 +10,13 @@ let answers = [];
 
 let playCount = 0;
 
-let currentSpeech = null;
-
 let timer = 15;
 
 let timerInterval = null;
 
 let candidateName = '';
 
-let isSpeaking = false;
-
-// PRELOAD VOICES
-window.onload = async ()=>{
-
-    await loadVoices();
-};
-
-// LOAD VOICES
-async function loadVoices(){
-
-    return new Promise(resolve => {
-
-        let voices =
-        speechSynthesis.getVoices();
-
-        if(voices.length){
-
-            resolve(voices);
-
-            return;
-        }
-
-        speechSynthesis.onvoiceschanged = ()=>{
-
-            voices =
-            speechSynthesis.getVoices();
-
-            resolve(voices);
-        };
-    });
-}
+let currentAudio = null;
 
 const loginScreen =
 document.getElementById(
@@ -172,6 +137,7 @@ function parseQuestions(rawText){
     questions =
     rounds.map((round,index)=>{
 
+        // AUDIO
         const audioMatch =
         round.match(
             /Audio Script\s*([\s\S]*?)\s*Question/
@@ -184,6 +150,7 @@ function parseQuestions(rawText){
             .trim()
         : '';
 
+        // QUESTION
         const questionMatch =
         round.match(
             /Question\s*([\s\S]*?)\s*Answer/
@@ -194,6 +161,7 @@ function parseQuestions(rawText){
         ? questionMatch[1].trim()
         : '';
 
+        // ANSWER
         const answerMatch =
         round.match(
             /Answer\s*([\s\S]*)/
@@ -269,6 +237,14 @@ function showQuestion(){
     timer = 15;
 
     playCount = 0;
+
+    // STOP OLD AUDIO
+    if(currentAudio){
+
+        currentAudio.pause();
+
+        currentAudio.currentTime = 0;
+    }
 
     updateSidebar();
 
@@ -392,11 +368,11 @@ async function toggleSpeech(){
 
     // PAUSE
     if(
-        speechSynthesis.speaking &&
-        !speechSynthesis.paused
+        currentAudio &&
+        !currentAudio.paused
     ){
 
-        speechSynthesis.pause();
+        currentAudio.pause();
 
         playBtn.innerText =
         '▶ Resume Audio';
@@ -406,10 +382,11 @@ async function toggleSpeech(){
 
     // RESUME
     if(
-        speechSynthesis.paused
+        currentAudio &&
+        currentAudio.paused
     ){
 
-        speechSynthesis.resume();
+        currentAudio.play();
 
         playBtn.innerText =
         '⏸ Pause Audio';
@@ -427,66 +404,10 @@ async function toggleSpeech(){
         return;
     }
 
-    const voices =
-    await loadVoices();
-
-    console.log(
-        'AVAILABLE VOICES:',
-        voices
-    );
-
-    // BEST INDIAN VOICE
-    const indianVoice =
-
-        voices.find(v =>
-            v.name.includes('Neerja')
-        )
-
-        ||
-
-        voices.find(v =>
-            v.name.includes('Prabhat')
-        )
-
-        ||
-
-        voices.find(v =>
-            v.name.includes('Microsoft')
-            &&
-            v.lang === 'en-IN'
-        )
-
-        ||
-
-        voices.find(v =>
-            v.lang === 'en-IN'
-        )
-
-        ||
-
-        voices.find(v =>
-            v.lang === 'en-GB'
-        )
-
-        ||
-
-        voices.find(v =>
-            v.lang.startsWith('en')
-        )
-
-        ||
-
-        voices[0];
-
-    console.log(
-        'SELECTED VOICE:',
-        indianVoice
-    );
-
     const q =
     selectedQuestions[currentQuestion];
 
-    // HUMANIZE TEXT
+    // HUMAN SPEECH FORMAT
     let humanText =
     q.audioText
 
@@ -497,134 +418,54 @@ async function toggleSpeech(){
     .replace(/BN/g,' Bank Nifty ')
     .replace(/Nifty/g,' Niftee ')
     .replace(/,/g,' , ')
-    .replace(/\./g,' ... ')
-    .replace(/24500/g,' 24 thousand 500 ')
-    .replace(/24800/g,' 24 thousand 800 ')
-    .replace(/55200/g,' 55 thousand 200 ');
-
-    currentSpeech =
-    new SpeechSynthesisUtterance(
-        humanText
-    );
-
-    currentSpeech.voice =
-    indianVoice;
-
-    currentSpeech.lang =
-    'en-IN';
-
-    currentSpeech.rate =
-    0.95;
-
-    currentSpeech.pitch =
-    1;
-
-    currentSpeech.volume =
-    1;
+    .replace(/\./g,' ... ');
 
     playBtn.innerText =
-    '⏸ Pause Audio';
-
-    currentSpeech.onstart = ()=>{
-
-        isSpeaking = true;
-    };
-
-    currentSpeech.onend = ()=>{
-
-        isSpeaking = false;
-
-        playBtn.innerText =
-        '▶ Play Audio';
-
-        startTimer();
-    };
-
-    currentSpeech.onerror = async (e)=>{
-
-        console.log(
-            'Speech Error:',
-            e.error
-        );
-
-        // FALLBACK
-        const fallback =
-        voices.find(v =>
-            v.lang.startsWith('en')
-        );
-
-        if(
-            fallback &&
-            fallback !== indianVoice
-        ){
-
-            const retrySpeech =
-            new SpeechSynthesisUtterance(
-                humanText
-            );
-
-            retrySpeech.voice =
-            fallback;
-
-            retrySpeech.lang =
-            'en-US';
-
-            retrySpeech.rate =
-            0.95;
-
-            retrySpeech.pitch =
-            1;
-
-            retrySpeech.volume =
-            1;
-
-            retrySpeech.onend = ()=>{
-
-                playBtn.innerText =
-                '▶ Play Audio';
-
-                startTimer();
-            };
-
-            await new Promise(resolve =>
-                setTimeout(resolve,300)
-            );
-
-            speechSynthesis.speak(
-                retrySpeech
-            );
-        }
-        else{
-
-            playBtn.innerText =
-            '▶ Play Audio';
-        }
-    };
-
-    playCount++;
-
-    updateSidebar();
+    'Loading Audio...';
 
     try{
 
-        if(
-            speechSynthesis.speaking
-        ){
+        // FREE TTS API
+        const ttsUrl =
 
-            speechSynthesis.cancel();
+`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
 
-            await new Promise(resolve =>
-                setTimeout(resolve,300)
+        currentAudio =
+        new Audio(ttsUrl);
+
+        currentAudio.play();
+
+        playBtn.innerText =
+        '⏸ Pause Audio';
+
+        currentAudio.onended = ()=>{
+
+            playBtn.innerText =
+            '▶ Play Audio';
+
+            startTimer();
+        };
+
+        currentAudio.onerror = ()=>{
+
+            playBtn.innerText =
+            '▶ Play Audio';
+
+            alert(
+                'Audio failed to load'
             );
-        }
+        };
 
-        speechSynthesis.speak(
-            currentSpeech
-        );
+        playCount++;
+
+        updateSidebar();
     }
     catch(err){
 
         console.log(err);
+
+        playBtn.innerText =
+        '▶ Play Audio';
     }
 }
 
@@ -656,11 +497,12 @@ function nextQuestion(){
 
     clearInterval(timerInterval);
 
-    if(
-        speechSynthesis.speaking
-    ){
+    // STOP AUDIO
+    if(currentAudio){
 
-        speechSynthesis.cancel();
+        currentAudio.pause();
+
+        currentAudio.currentTime = 0;
     }
 
     if(
@@ -686,6 +528,7 @@ nextBtn.addEventListener(
 // SHOW RESULTS
 async function showResults(){
 
+    // PREVENT MULTIPLE SUBMISSIONS
     if(submitted){
 
         return;
@@ -755,11 +598,12 @@ async function showResults(){
         console.log(err);
     }
 
-    if(
-        speechSynthesis.speaking
-    ){
+    // STOP AUDIO
+    if(currentAudio){
 
-        speechSynthesis.cancel();
+        currentAudio.pause();
+
+        currentAudio.currentTime = 0;
     }
 
     clearInterval(timerInterval);
