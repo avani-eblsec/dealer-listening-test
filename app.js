@@ -238,7 +238,7 @@ function showQuestion(){
 
     clearInterval(timerInterval);
 
-    timer = 30;
+    timer = 15;
 
     playCount = 0;
 
@@ -550,7 +550,7 @@ async function showResults(){
 
         await fetch(
 
-            'https://script.google.com/a/macros/eblsec.com/s/AKfycbx941-fP_baIutHzCF4ZJ-GwSBE3HReDoH-XnFHiVFUUkLeig62a8FV2JkOooAjKSo3/exec',
+            'https://script.google.com/a/macros/eblsec.com/s/AKfycbw6bFcfOQch2_OVH-O7j-V9nVoy1kbb1YKhFa_3OYmaSKPyYpLtlUt1k8IFLz9puG34/exec',
 
             {
 
