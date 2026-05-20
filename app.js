@@ -18,7 +18,6 @@ let candidateName = '';
 
 let currentAudio = null;
 
-// PRELOAD VOICES
 window.onload = ()=>{
 
     speechSynthesis.getVoices();
@@ -397,7 +396,7 @@ async function toggleSpeech(){
         currentAudio.play();
 
         playBtn.innerText =
-        '⏸ Pause Audio';
+        '⏸ Resume Audio';
 
         return;
     }
@@ -437,29 +436,32 @@ async function toggleSpeech(){
         const voices =
         speechSynthesis.getVoices();
 
-        // BEST INDIAN VOICE
+        // STABLE LOCAL VOICE
         const indianVoice =
 
             voices.find(v =>
+
                 v.name.includes('Neerja')
+                &&
+                v.localService
             )
 
             ||
 
             voices.find(v =>
-                v.name.includes('Prabhat')
-            )
 
-            ||
-
-            voices.find(v =>
                 v.lang === 'en-IN'
+                &&
+                v.localService
             )
 
             ||
 
             voices.find(v =>
+
                 v.lang.startsWith('en')
+                &&
+                v.localService
             )
 
             ||
@@ -525,26 +527,50 @@ async function toggleSpeech(){
                 'Browser TTS Failed'
             );
 
-            // FALLBACK API
-            const ttsUrl =
+            try{
+
+                // API FALLBACK
+                const ttsUrl =
 
 `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
 
-            currentAudio =
-            new Audio(ttsUrl);
+                const response =
+                await fetch(ttsUrl);
 
-            currentAudio.play();
+                const blob =
+                await response.blob();
 
-            playBtn.innerText =
-            '⏸ Pause Audio';
+                const audioUrl =
+                URL.createObjectURL(blob);
 
-            currentAudio.onended = ()=>{
+                currentAudio =
+                new Audio(audioUrl);
+
+                await currentAudio.play();
+
+                playBtn.innerText =
+                '⏸ Pause Audio';
+
+                currentAudio.onended = ()=>{
+
+                    playBtn.innerText =
+                    '▶ Play Audio';
+
+                    startTimer();
+                };
+
+            }
+            catch(err){
+
+                console.log(err);
+
+                alert(
+                    'Audio playback failed'
+                );
 
                 playBtn.innerText =
                 '▶ Play Audio';
-
-                startTimer();
-            };
+            }
         };
 
         speechSynthesis.cancel();
