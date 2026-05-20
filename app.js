@@ -12,7 +12,7 @@ let playCount = 0;
 
 let currentSpeech = null;
 
-let timer = 30;
+let timer = 15;
 
 let timerInterval = null;
 
