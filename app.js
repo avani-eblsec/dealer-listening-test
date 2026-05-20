@@ -550,7 +550,7 @@ async function showResults(){
 
         await fetch(
 
-            'https://script.google.com/a/macros/eblsec.com/s/AKfycbw6bFcfOQch2_OVH-O7j-V9nVoy1kbb1YKhFa_3OYmaSKPyYpLtlUt1k8IFLz9puG34/exec',
+            'https://script.google.com/macros/s/AKfycbwQbim4G_7BcBXNcnO6Uu63C0CJwRV4-kJBd7e-AzCB-yTHG4Fam0TabLdWsU_xZV5P/exec',
 
             {
 
