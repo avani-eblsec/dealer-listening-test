@@ -373,7 +373,7 @@ async function toggleSpeech(){
         '.play-btn'
     );
 
-    // PAUSE AUDIO
+    // PAUSE
     if(
         currentAudio &&
         !currentAudio.paused
@@ -387,7 +387,7 @@ async function toggleSpeech(){
         return;
     }
 
-    // RESUME AUDIO
+    // RESUME
     if(
         currentAudio &&
         currentAudio.paused
@@ -414,7 +414,6 @@ async function toggleSpeech(){
     const q =
     selectedQuestions[currentQuestion];
 
-    // HUMANIZE TEXT
     let humanText =
     q.audioText
 
@@ -432,27 +431,17 @@ async function toggleSpeech(){
 
     try{
 
-        // GET VOICES
         const voices =
         speechSynthesis.getVoices();
 
-        // STABLE LOCAL VOICE
-        const indianVoice =
-
-            voices.find(v =>
-
-                v.name.includes('Neerja')
-                &&
-                v.localService
-            )
-
-            ||
+        // ONLY LOCAL STABLE VOICES
+        const localVoice =
 
             voices.find(v =>
 
                 v.lang === 'en-IN'
                 &&
-                v.localService
+                v.localService === true
             )
 
             ||
@@ -461,127 +450,89 @@ async function toggleSpeech(){
 
                 v.lang.startsWith('en')
                 &&
-                v.localService
+                v.localService === true
             )
 
             ||
 
-            voices[0];
+            voices.find(v =>
+                v.localService === true
+            );
 
         console.log(
             'VOICE:',
-            indianVoice
+            localVoice
         );
 
-        // CREATE SPEECH
-        const utterance =
-        new SpeechSynthesisUtterance(
-            humanText
-        );
+        // IF LOCAL VOICE EXISTS
+        if(localVoice){
 
-        utterance.voice =
-        indianVoice;
+            const utterance =
+            new SpeechSynthesisUtterance(
+                humanText
+            );
 
-        utterance.lang =
-        'en-IN';
+            utterance.voice =
+            localVoice;
 
-        utterance.rate =
-        0.95;
+            utterance.lang =
+            localVoice.lang;
 
-        utterance.pitch =
-        1;
+            utterance.rate =
+            0.95;
 
-        utterance.volume =
-        1;
+            utterance.pitch =
+            1;
 
-        let fallbackTriggered =
-        false;
+            utterance.volume =
+            1;
 
-        // START
-        utterance.onstart = ()=>{
+            utterance.onstart = ()=>{
 
-            playBtn.innerText =
-            '⏸ Pause Audio';
-        };
+                playBtn.innerText =
+                '⏸ Pause Audio';
+            };
 
-        // END
-        utterance.onend = ()=>{
+            utterance.onend = ()=>{
+
+                playBtn.innerText =
+                '▶ Play Audio';
+
+                startTimer();
+            };
+
+            utterance.onerror =
+            ()=>{
+
+                playBtn.innerText =
+                '▶ Play Audio';
+
+                alert(
+                    'Speech failed on this browser'
+                );
+            };
+
+            speechSynthesis.cancel();
+
+            setTimeout(()=>{
+
+                speechSynthesis.speak(
+                    utterance
+                );
+
+            },100);
+        }
+        else{
+
+            alert(
+                'No local English voice found. Please use Microsoft Edge.'
+            );
 
             playBtn.innerText =
             '▶ Play Audio';
 
-            startTimer();
-        };
-
-        // FALLBACK
-        utterance.onerror =
-        async ()=>{
-
-            if(fallbackTriggered)
             return;
-
-            fallbackTriggered =
-            true;
-
-            console.log(
-                'Browser TTS Failed'
-            );
-
-            try{
-
-                // API FALLBACK
-                const ttsUrl =
-
-`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
-
-                const response =
-                await fetch(ttsUrl);
-
-                const blob =
-                await response.blob();
-
-                const audioUrl =
-                URL.createObjectURL(blob);
-
-                currentAudio =
-                new Audio(audioUrl);
-
-                await currentAudio.play();
-
-                playBtn.innerText =
-                '⏸ Pause Audio';
-
-                currentAudio.onended = ()=>{
-
-                    playBtn.innerText =
-                    '▶ Play Audio';
-
-                    startTimer();
-                };
-
-            }
-            catch(err){
-
-                console.log(err);
-
-                alert(
-                    'Audio playback failed'
-                );
-
-                playBtn.innerText =
-                '▶ Play Audio';
-            }
-        };
-
-        speechSynthesis.cancel();
-
-        setTimeout(()=>{
-
-            speechSynthesis.speak(
-                utterance
-            );
-
-        },100);
+        }
 
         playCount++;
 
