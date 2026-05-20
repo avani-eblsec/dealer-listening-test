@@ -96,10 +96,7 @@ async function loadQuestions(){
 
         parseQuestions(rawText);
 
-        console.log(
-            'Questions Loaded:',
-            questions
-        );
+    
 
         if(
             questions.length === 0
