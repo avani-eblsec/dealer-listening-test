@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Dealer Listening Assessment
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div
+        id="loginScreen"
+        class="login-screen"
+    >
+
+        <div class="login-box">
+
+            <h1>
+                Dealer Listening Test
+            </h1>
+
+            <p>
+                Enter your name to start assessment
+            </p>
+
+            <input
+                type="text"
+                id="candidateName"
+                placeholder="Enter your name"
+            >
+
+            <button
+                id="startBtn"
+            >
+
+                Start Test
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div
+        class="dashboard"
+        id="dashboard"
+        style="display:none;"
+    >
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+
+            <div class="logo">
+
+                <div class="logo-circle">
+                    D
+                </div>
+
+                <div>
+
+                    <h2>
+                        Dealer Test
+                    </h2>
+
+                    <p>
+                        Listening Assessment
+                    </p>
+
+                </div>
+
+            </div>
+
+            <div class="stats">
+
+                <div class="stat-card">
+
+                    <span>
+                        Candidate
+                    </span>
+
+                    <h3 id="candidateDisplay">
+                        -
+                    </h3>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <span>
+                        Time Left
+                    </span>
+
+                    <h3 id="timer">
+                        30s
+                    </h3>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <span>
+                        Plays Left
+                    </span>
+
+                    <h3 id="playsLeft">
+                        2
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- MAIN -->
+        <div class="main-panel">
+
+            <div class="topbar">
+
+                <div>
+
+                    <h1>
+                        Dealer Listening Assessment
+                    </h1>
+
+                    <p>
+                        Listen carefully and answer accurately
+                    </p>
+
+                </div>
+
+                <div class="progress-box">
+
+                    <span>
+                        Progress
+                    </span>
+
+                    <h2 id="progressText">
+                        1 / 10
+                    </h2>
+
+                </div>
+
+            </div>
+
+            <div class="card">
+
+                <div id="test-container"></div>
+
+                <button id="nextBtn">
+                    Next Question
+                </button>
+
+            </div>
+
+            <div id="result"></div>
+
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+
+</body>
+</html>
