@@ -1,5 +1,5 @@
 window.speechSynthesis.cancel();
-
+let submitted = false;
 let questions = [];
 
 let selectedQuestions = [];
@@ -523,6 +523,14 @@ nextBtn.addEventListener(
 // SHOW RESULTS
 async function showResults(){
 
+    // PREVENT MULTIPLE SUBMISSIONS
+    if(submitted){
+
+        return;
+    }
+
+    submitted = true;
+
     let score = 0;
 
     selectedQuestions.forEach(
@@ -545,7 +553,6 @@ async function showResults(){
     const time =
     now.toLocaleTimeString();
 
-    // SEND DATA TO GOOGLE SHEET
     try{
 
         await fetch(
@@ -578,16 +585,17 @@ async function showResults(){
         );
 
         console.log(
-            'Result Saved'
+            'Result Submitted'
         );
     }
     catch(err){
 
-        console.log(
-            'Sheet Error:',
-            err
-        );
+        console.log(err);
     }
+
+    speechSynthesis.cancel();
+
+    clearInterval(timerInterval);
 
     container.innerHTML = '';
 
