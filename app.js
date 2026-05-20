@@ -18,6 +18,9 @@ let candidateName = '';
 
 let currentAudio = null;
 
+window.currentUtterance = null;
+
+// PRELOAD VOICES
 window.onload = ()=>{
 
     speechSynthesis.getVoices();
@@ -249,8 +252,11 @@ function showQuestion(){
         currentAudio.pause();
 
         currentAudio.currentTime = 0;
+
+        currentAudio = null;
     }
 
+    // STOP SPEECH
     speechSynthesis.cancel();
 
     updateSidebar();
@@ -375,11 +381,11 @@ async function toggleSpeech(){
 
     // PAUSE
     if(
-        currentAudio &&
-        !currentAudio.paused
+        speechSynthesis.speaking &&
+        !speechSynthesis.paused
     ){
 
-        currentAudio.pause();
+        speechSynthesis.pause();
 
         playBtn.innerText =
         '▶ Resume Audio';
@@ -389,14 +395,13 @@ async function toggleSpeech(){
 
     // RESUME
     if(
-        currentAudio &&
-        currentAudio.paused
+        speechSynthesis.paused
     ){
 
-        currentAudio.play();
+        speechSynthesis.resume();
 
         playBtn.innerText =
-        '⏸ Resume Audio';
+        '⏸ Pause Audio';
 
         return;
     }
@@ -441,7 +446,7 @@ async function toggleSpeech(){
 
                 v.lang === 'en-IN'
                 &&
-                v.localService === true
+                v.localService
             )
 
             ||
@@ -450,101 +455,86 @@ async function toggleSpeech(){
 
                 v.lang.startsWith('en')
                 &&
-                v.localService === true
+                v.localService
             )
 
             ||
 
-            voices.find(v =>
-                v.localService === true
-            );
+            voices[0];
 
         console.log(
             'VOICE:',
             localVoice
         );
 
-        // IF LOCAL VOICE EXISTS
-        if(localVoice){
-            
-            window.currentUtterance =
-            new SpeechSynthesisUtterance(
-                humanText
-            );
-            
-            const utterance =
-            window.currentUtterance;
-            utterance.voice =
-            localVoice;
+        window.currentUtterance =
+        new SpeechSynthesisUtterance(
+            humanText
+        );
 
-            utterance.lang =
-            localVoice.lang;
+        const utterance =
+        window.currentUtterance;
 
-            utterance.rate =
-            0.81;
+        utterance.voice =
+        localVoice;
 
-            utterance.pitch =
-            1;
+        utterance.lang =
+        localVoice.lang;
 
-            utterance.volume =
-            1;
+        utterance.rate =
+        0.95;
 
-            utterance.onstart = ()=>{
+        utterance.pitch =
+        1;
 
-                playBtn.innerText =
-                '⏸ Pause Audio';
-            };
+        utterance.volume =
+        1;
 
-            utterance.onend = ()=>{
+        utterance.onstart = ()=>{
 
-                playBtn.innerText =
-                '▶ Play Audio';
+            playBtn.innerText =
+            '⏸ Pause Audio';
+        };
 
-                startTimer();
-            };
-
-            utterance.onerror = (e)=>{
-            
-                // IGNORE MANUAL CANCEL
-                if(
-                    e.error === 'interrupted'
-                    ||
-                    e.error === 'canceled'
-                ){
-            
-                    return;
-                }
-            
-                console.log(e);
-            
-                playBtn.innerText =
-                '▶ Play Audio';
-            
-                alert(
-                    'Speech failed on this browser'
-                );
-            };
-            speechSynthesis.cancel();
-
-            setTimeout(()=>{
-
-                speechSynthesis.speak(
-                    utterance
-                );
-
-            },100);
-        }
-        else{
-
-            alert(
-                'No local English voice found. Please use Microsoft Edge.'
-            );
+        utterance.onend = ()=>{
 
             playBtn.innerText =
             '▶ Play Audio';
 
-            return;
-        }
+            startTimer();
+        };
+
+        utterance.onerror = (e)=>{
+
+            // IGNORE MANUAL CANCEL
+            if(
+                e.error === 'interrupted'
+                ||
+                e.error === 'canceled'
+            ){
+
+                return;
+            }
+
+            console.log(e);
+
+            playBtn.innerText =
+            '▶ Play Audio';
+
+            alert(
+                'Speech failed on this browser'
+            );
+        };
+
+        speechSynthesis.cancel();
+
+        setTimeout(()=>{
+
+            speechSynthesis.speak(
+                utterance
+            );
+
+        },100);
 
         playCount++;
 
@@ -587,7 +577,7 @@ function nextQuestion(){
 
     clearInterval(timerInterval);
 
-    // STOP API AUDIO
+    // STOP AUDIO
     if(currentAudio){
 
         currentAudio.pause();
@@ -597,10 +587,8 @@ function nextQuestion(){
         currentAudio = null;
     }
 
-    // STOP SPEECH CLEANLY
-    speechSynthesis.onvoiceschanged = null;
-
-    window.speechSynthesis.cancel();
+    // STOP SPEECH
+    speechSynthesis.cancel();
 
     // REMOVE OLD EVENTS
     if(window.currentUtterance){
@@ -610,6 +598,7 @@ function nextQuestion(){
         currentUtterance.onerror = null;
     }
 
+    // LAST QUESTION
     if(
         currentQuestion ===
         selectedQuestions.length - 1
@@ -624,6 +613,11 @@ function nextQuestion(){
 
     showQuestion();
 }
+
+nextBtn.addEventListener(
+    'click',
+    nextQuestion
+);
 
 // SHOW RESULTS
 async function showResults(){
