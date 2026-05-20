@@ -5,7 +5,7 @@ let questions = [];
 let selectedQuestions = [];
 
 let currentQuestion = 0;
-
+let audioCache = {};
 let answers = [];
 
 let playCount = 0;
@@ -250,7 +250,8 @@ function showQuestion(){
 
     const q =
     selectedQuestions[currentQuestion];
-
+preloadAudio(currentQuestion);
+preloadAudio(currentQuestion + 1);
     if(!q){
 
         alert(
@@ -407,7 +408,6 @@ async function toggleSpeech(){
     const q =
     selectedQuestions[currentQuestion];
 
-    // HUMAN SPEECH FORMAT
     let humanText =
     q.audioText
 
@@ -420,20 +420,45 @@ async function toggleSpeech(){
     .replace(/,/g,' , ')
     .replace(/\./g,' ... ');
 
-    playBtn.innerText =
-    'Loading Audio...';
-
     try{
 
-        // FREE TTS API
-        const ttsUrl =
+        playBtn.innerText =
+        'Loading Audio...';
+
+        let audioUrl;
+
+        // USE CACHE
+        if(
+            audioCache[currentQuestion]
+        ){
+
+            audioUrl =
+            audioCache[currentQuestion];
+        }
+        else{
+
+            const ttsUrl =
 
 `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
 
-        currentAudio =
-        new Audio(ttsUrl);
+            const response =
+            await fetch(ttsUrl);
 
-        currentAudio.play();
+            const blob =
+            await response.blob();
+
+            audioUrl =
+            URL.createObjectURL(blob);
+
+            // SAVE CACHE
+            audioCache[currentQuestion] =
+            audioUrl;
+        }
+
+        currentAudio =
+        new Audio(audioUrl);
+
+        await currentAudio.play();
 
         playBtn.innerText =
         '⏸ Pause Audio';
@@ -468,7 +493,37 @@ async function toggleSpeech(){
         '▶ Play Audio';
     }
 }
+async function preloadAudio(index){
 
+    if(
+        audioCache[index]
+    ) return;
+
+    const q =
+    selectedQuestions[index];
+
+    if(!q) return;
+
+    let humanText =
+    q.audioText
+
+    .replace(/CE/g,' C E ')
+    .replace(/PE/g,' P E ')
+    .replace(/SL/g,' stop loss ');
+
+    const ttsUrl =
+
+`https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(humanText)}`;
+
+    const response =
+    await fetch(ttsUrl);
+
+    const blob =
+    await response.blob();
+
+    audioCache[index] =
+    URL.createObjectURL(blob);
+}
 // SELECT OPTION
 function selectOption(
     element,
