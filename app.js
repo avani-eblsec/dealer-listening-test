@@ -48,7 +48,7 @@ document.getElementById(
     'result'
 );
 
-// START
+// START TEST
 startBtn.addEventListener(
 'click',
 async ()=>{
@@ -96,9 +96,27 @@ async function loadQuestions(){
 
         parseQuestions(rawText);
 
+        console.log(
+            'Questions Loaded:',
+            questions
+        );
+
+        if(
+            questions.length === 0
+        ){
+
+            alert(
+                'No questions loaded'
+            );
+
+            return;
+        }
+
         selectedQuestions =
         shuffleArray(questions)
         .slice(0,10);
+
+        currentQuestion = 0;
 
         showQuestion();
     }
@@ -116,37 +134,43 @@ async function loadQuestions(){
 function parseQuestions(rawText){
 
     const rounds =
-    rawText.match(
-        /Round\\s+\\d+[\\s\\S]*?(?=Round\\s+\\d+|$)/g
-    ) || [];
+    rawText.split(
+        /Round\s+\d+/g
+    )
+    .filter(r => r.trim());
 
     questions =
     rounds.map((round,index)=>{
 
+        // AUDIO
         const audioMatch =
         round.match(
-            /Audio Script\\s*[\\r\\n\\s]*[“\"]([\\s\\S]*?)[”\"]/
+            /Audio Script\s*([\s\S]*?)\s*Question/
         );
 
+        let audioText =
+        audioMatch
+        ? audioMatch[1]
+            .replace(/[“”"]/g,'')
+            .trim()
+        : '';
+
+        // QUESTION
         const questionMatch =
         round.match(
-            /Question\\s*([\\s\\S]*?)\\s*Answer/
+            /Question\s*([\s\S]*?)\s*Answer/
         );
-
-        const answerMatch =
-        round.match(
-            /Answer\\s*([\\s\\S]*)/
-        );
-
-        const audioText =
-        audioMatch
-        ? audioMatch[1].trim()
-        : '';
 
         const question =
         questionMatch
         ? questionMatch[1].trim()
         : '';
+
+        // ANSWER
+        const answerMatch =
+        round.match(
+            /Answer\s*([\s\S]*)/
+        );
 
         const answer =
         answerMatch
@@ -169,7 +193,7 @@ function parseQuestions(rawText){
     });
 }
 
-// OPTIONS
+// GENERATE OPTIONS
 function generateOptions(correct){
 
     if(!isNaN(correct)){
@@ -226,6 +250,15 @@ function showQuestion(){
     const q =
     selectedQuestions[currentQuestion];
 
+    if(!q){
+
+        alert(
+            'Question loading failed'
+        );
+
+        return;
+    }
+
     container.innerHTML = `
 
         <button
@@ -281,7 +314,7 @@ function showQuestion(){
     }
 }
 
-// SIDEBAR
+// UPDATE SIDEBAR
 function updateSidebar(){
 
     document.getElementById(
@@ -324,7 +357,7 @@ function startTimer(){
     },1000);
 }
 
-// AUDIO
+// PLAY AUDIO
 function toggleSpeech(){
 
     const playBtn =
@@ -332,6 +365,7 @@ function toggleSpeech(){
         '.play-btn'
     );
 
+    // PAUSE
     if(
         speechSynthesis.speaking &&
         !speechSynthesis.paused
@@ -345,6 +379,7 @@ function toggleSpeech(){
         return;
     }
 
+    // RESUME
     if(
         speechSynthesis.paused &&
         currentSpeech
@@ -358,6 +393,7 @@ function toggleSpeech(){
         return;
     }
 
+    // LIMIT
     if(playCount >= 2){
 
         alert(
@@ -375,6 +411,7 @@ function toggleSpeech(){
 
     .replace(/CE/g,' C E ')
     .replace(/PE/g,' P E ')
+    .replace(/SL/g,' stop loss ')
     .replace(/\./g,' ... ')
     .replace(/,/g,' , ');
 
@@ -392,21 +429,28 @@ function toggleSpeech(){
     currentSpeech.pitch =
     0.82;
 
+    currentSpeech.volume =
+    1;
+
     const voices =
     speechSynthesis.getVoices();
 
-    const voice =
+    const indianVoice =
 
         voices.find(v =>
             v.lang === 'en-IN'
         ) ||
 
+        voices.find(v =>
+            v.name.includes('Google')
+        ) ||
+
         voices[0];
 
-    if(voice){
+    if(indianVoice){
 
         currentSpeech.voice =
-        voice;
+        indianVoice;
     }
 
     playBtn.innerText =
@@ -429,7 +473,7 @@ function toggleSpeech(){
     );
 }
 
-// SELECT
+// SELECT OPTION
 function selectOption(
     element,
     option
@@ -452,7 +496,7 @@ function selectOption(
     option;
 }
 
-// NEXT
+// NEXT QUESTION
 function nextQuestion(){
 
     clearInterval(timerInterval);
@@ -479,7 +523,7 @@ nextBtn.addEventListener(
     nextQuestion
 );
 
-// RESULTS
+// SHOW RESULTS
 function showResults(){
 
     let score = 0;
