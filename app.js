@@ -521,7 +521,7 @@ nextBtn.addEventListener(
 );
 
 // SHOW RESULTS
-function showResults(){
+async function showResults(){
 
     let score = 0;
 
@@ -536,19 +536,58 @@ function showResults(){
         }
     });
 
-    localStorage.setItem(
+    const now =
+    new Date();
 
-        'dealer_test_result',
+    const date =
+    now.toLocaleDateString();
 
-        JSON.stringify({
+    const time =
+    now.toLocaleTimeString();
 
-            name:candidateName,
+    // SEND DATA TO GOOGLE SHEET
+    try{
 
-            score:score,
+        await fetch(
 
-            date:new Date()
-        })
-    );
+            'https://script.google.com/a/macros/eblsec.com/s/AKfycbx941-fP_baIutHzCF4ZJ-GwSBE3HReDoH-XnFHiVFUUkLeig62a8FV2JkOooAjKSo3/exec',
+
+            {
+
+                method:'POST',
+
+                mode:'no-cors',
+
+                headers:{
+
+                    'Content-Type':
+                    'application/json'
+                },
+
+                body:JSON.stringify({
+
+                    date,
+
+                    time,
+
+                    name:candidateName,
+
+                    score:`${score}/10`
+                })
+            }
+        );
+
+        console.log(
+            'Result Saved'
+        );
+    }
+    catch(err){
+
+        console.log(
+            'Sheet Error:',
+            err
+        );
+    }
 
     container.innerHTML = '';
 
@@ -570,6 +609,17 @@ function showResults(){
                 ${candidateName}
 
             </h2>
+
+            <p
+                style="
+                    margin-top:15px;
+                    color:#94a3b8;
+                "
+            >
+
+                Result Submitted Successfully
+
+            </p>
 
         </div>
     `;
