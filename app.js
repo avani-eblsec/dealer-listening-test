@@ -482,7 +482,7 @@ async function toggleSpeech(){
         localVoice.lang;
 
         utterance.rate =
-        0.95;
+        1;
 
         utterance.pitch =
         1;
